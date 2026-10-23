@@ -124,7 +124,7 @@ if (!function_exists('is_active_page')) {
           <a href="profile.php" class="flex items-center gap-2.5 bg-white border border-[#E7E0D8] rounded-full py-1 pl-1 pr-3 shadow-sm">
             <img src="<?= htmlspecialchars($user_avatar) ?>" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-[#8C5835]"/>
             <span class="text-xs font-bold text-[#2D2319] hidden sm:inline max-w-[100px] truncate"><?= htmlspecialchars($display_name) ?></span>
-            <a href="dang-xuat.php" class="text-xs text-red-600 hover:text-red-800 ml-1 font-semibold p-1" title="Đăng xuất">
+            <a href="logout.php" class="text-xs text-red-600 hover:text-red-800 ml-1 font-semibold p-1" title="Đăng xuất">
               <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
             </a>
           </div>
