@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 25, 2026 lúc 04:43 PM
+-- Thời gian đã tạo: Th10 24, 2026 lúc 06:15 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -72,34 +72,6 @@ INSERT INTO `chitietsanpham` (`CTSP_Ma`, `NC_Ma`, `PK_Ma`, `CTSP_ChatLieu`, `CTS
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `hinhanhsanpham`
---
-
-CREATE TABLE `hinhanhsanpham` (
-  `HASP_Ma` int(11) NOT NULL,
-  `HASP_LoaiSanPham` enum('nhaccu','phukien') NOT NULL,
-  `HASP_MaSanPham` int(11) NOT NULL,
-  `HASP_DuongDan` varchar(255) NOT NULL,
-  `HASP_ThuTu` int(11) NOT NULL DEFAULT 1,
-  `HASP_AnhChinh` tinyint(1) NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Đang đổ dữ liệu cho bảng `hinhanhsanpham`
---
-
-INSERT INTO `hinhanhsanpham` (`HASP_Ma`, `HASP_LoaiSanPham`, `HASP_MaSanPham`, `HASP_DuongDan`, `HASP_ThuTu`, `HASP_AnhChinh`) VALUES
-(1, 'phukien', 1, 'pk1.webp', 1, 1),
-(2, 'phukien', 1, 'pk1.webp', 2, 0),
-(3, 'phukien', 1, 'pk1.webp', 3, 0),
-(4, 'phukien', 2, 'pk2.webp', 1, 1),
-(5, 'phukien', 2, 'pk2.webp', 2, 0),
-(6, 'phukien', 3, 'pk3.webp', 1, 1),
-(7, 'phukien', 3, 'pk3.webp', 2, 0);
-
--- --------------------------------------------------------
-
---
 -- Cấu trúc bảng cho bảng `loainhaccu`
 --
 
@@ -117,8 +89,8 @@ INSERT INTO `loainhaccu` (`LNC_Ma`, `LNC_Ten`, `LNC_MoTa`) VALUES
 (1, 'Guitar', 'Các dòng Guitar Acoustic, Electric, Classic'),
 (2, 'Piano', 'Piano cơ Upright/Grand và Piano điện'),
 (3, 'Trống', 'Trống Acoustic và Trống điện tử'),
-(4, 'Ukulele', 'Các dòng đàn Ukulele'),
-(5, 'Violin', 'Các dòng đàn Violin'),
+(4, 'Ukulele & Violin', 'Nhạc cụ dây nhỏ gọn và nhạc cụ cổ điển'),
+(5, 'Phụ Kiện Nhạc Cụ', 'Capo, Dây đàn, Bao đàn, Chân đế, Phím gảy'),
 (6, 'Organ', 'Các dòng đàn Organ điện tử, Keyboard phục vụ học tập và trình diễn');
 
 -- --------------------------------------------------------
@@ -182,6 +154,7 @@ INSERT INTO `nhaccuphukien` (`NC_Ma`, `PK_Ma`, `GhiChu`) VALUES
 
 CREATE TABLE `phukien` (
   `PK_Ma` int(11) NOT NULL,
+  `LNC_Ma` int(11) NOT NULL,
   `TH_Ma` int(11) NOT NULL,
   `PK_Ten` varchar(150) NOT NULL,
   `PK_GiaBan` decimal(15,2) NOT NULL,
@@ -196,10 +169,10 @@ CREATE TABLE `phukien` (
 -- Đang đổ dữ liệu cho bảng `phukien`
 --
 
-INSERT INTO `phukien` (`PK_Ma`, `TH_Ma`, `PK_Ten`, `PK_GiaBan`, `PK_GiaKhuyenMai`, `PK_SoLuongTon`, `PK_HinhAnh`, `PK_MoTa`, `PK_TrangThai`) VALUES
-(1, 5, 'Capo Guitar Kẹp Hợp Kim Alice A007A', 80000.00, NULL, 50, 'pk1.webp', 'Capo kẹp lò xo hợp kim nhôm siêu bền cho Guitar Acoustic & Classic', 1),
-(2, 5, 'Bộ Dây Guitar Acoustic Alice A406', 120000.00, 95000.00, 30, 'pk2.webp', 'Dây đàn Acoustic bọc đồng chống gỉ sét, âm thanh đanh sáng', 1),
-(3, 1, 'Bao Đàn Guitar Acoustic 3 Lớp Dày', 250000.00, NULL, 20, 'pk3.webp', 'Bao da 3 lớp chống va đập và chống nước nhẹ cho Guitar', 1);
+INSERT INTO `phukien` (`PK_Ma`, `LNC_Ma`, `TH_Ma`, `PK_Ten`, `PK_GiaBan`, `PK_GiaKhuyenMai`, `PK_SoLuongTon`, `PK_HinhAnh`, `PK_MoTa`, `PK_TrangThai`) VALUES
+(1, 5, 5, 'Capo Guitar Kẹp Hợp Kim Alice A007A', 80000.00, NULL, 50, 'pk1.webp', 'Capo kẹp lò xo hợp kim nhôm siêu bền cho Guitar Acoustic & Classic', 1),
+(2, 5, 5, 'Bộ Dây Guitar Acoustic Alice A406', 120000.00, 95000.00, 30, 'pk2.webp', 'Dây đàn Acoustic bọc đồng chống gỉ sét, âm thanh đanh sáng', 1),
+(3, 5, 1, 'Bao Đàn Guitar Acoustic 3 Lớp Dày', 250000.00, NULL, 20, 'pk3.webp', 'Bao da 3 lớp chống va đập và chống nước nhẹ cho Guitar', 1);
 
 -- --------------------------------------------------------
 
@@ -238,13 +211,6 @@ ALTER TABLE `chitietsanpham`
   ADD UNIQUE KEY `uq_ctsp_pk` (`PK_Ma`);
 
 --
--- Chỉ mục cho bảng `hinhanhsanpham`
---
-ALTER TABLE `hinhanhsanpham`
-  ADD PRIMARY KEY (`HASP_Ma`),
-  ADD KEY `idx_hinhanh_sanpham` (`HASP_LoaiSanPham`,`HASP_MaSanPham`,`HASP_ThuTu`);
-
---
 -- Chỉ mục cho bảng `loainhaccu`
 --
 ALTER TABLE `loainhaccu`
@@ -271,6 +237,7 @@ ALTER TABLE `nhaccuphukien`
 --
 ALTER TABLE `phukien`
   ADD PRIMARY KEY (`PK_Ma`),
+  ADD KEY `fk_phukien_loainhaccu` (`LNC_Ma`),
   ADD KEY `fk_phukien_thuonghieu` (`TH_Ma`);
 
 --
@@ -289,12 +256,6 @@ ALTER TABLE `thuonghieu`
 --
 ALTER TABLE `chitietsanpham`
   MODIFY `CTSP_Ma` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT cho bảng `hinhanhsanpham`
---
-ALTER TABLE `hinhanhsanpham`
-  MODIFY `HASP_Ma` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT cho bảng `loainhaccu`
@@ -349,6 +310,7 @@ ALTER TABLE `nhaccuphukien`
 -- Các ràng buộc cho bảng `phukien`
 --
 ALTER TABLE `phukien`
+  ADD CONSTRAINT `fk_phukien_loainhaccu` FOREIGN KEY (`LNC_Ma`) REFERENCES `loainhaccu` (`LNC_Ma`),
   ADD CONSTRAINT `fk_phukien_thuonghieu` FOREIGN KEY (`TH_Ma`) REFERENCES `thuonghieu` (`TH_Ma`);
 COMMIT;
 
