@@ -116,7 +116,7 @@ $user_avatar = $_SESSION['user_avatar'] ?? 'https://images.unsplash.com/photo-15
             <a href="profile.php" class="list-group-item list-group-item-action active">
               <i class="fa-solid fa-user-gear me-2"></i> Thông tin & Studio
             </a>
-            <a href="cart.php" class="list-group-item list-group-item-action">
+            <a href="gio-hang.php" class="list-group-item list-group-item-action">
               <i class="fa-solid fa-cart-shopping me-2"></i> Giỏ hàng của tôi
             </a>
             <a href="#" class="list-group-item list-group-item-action" onclick="alert('Tính năng đang phát triển!')">
@@ -125,7 +125,7 @@ $user_avatar = $_SESSION['user_avatar'] ?? 'https://images.unsplash.com/photo-15
             <a href="#" class="list-group-item list-group-item-action" onclick="alert('Tính năng đang phát triển!')">
               <i class="fa-solid fa-shield-halved me-2"></i> Kho Serial & Bảo hành
             </a>
-            <a href="dang-xuat.php" class="list-group-item list-group-item-action text-danger mt-3 border-top">
+            <a href="logout.php" class="list-group-item list-group-item-action text-danger mt-3 border-top">
               <i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất tài khoản
             </a>
           </div>
@@ -182,7 +182,7 @@ $user_avatar = $_SESSION['user_avatar'] ?? 'https://images.unsplash.com/photo-15
         <div class="card-dashboard p-4 shadow-sm mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
             <h2 class="fs-6 fw-bold text-dark mb-0"><i class="fa-solid fa-guitar text-secondary me-2"></i>Nhạc Cụ & Thiết Bị Của Tôi</h2>
-            <a href="cart.php" class="small text-decoration-none fw-semibold" style="color: var(--wood-primary);">Xem giỏ hàng →</a>
+            <a href="gio-hang.php" class="small text-decoration-none fw-semibold" style="color: var(--wood-primary);">Xem giỏ hàng →</a>
           </div>
 
           <div class="d-flex align-items-center gap-3 p-3 rounded-3 bg-light border">

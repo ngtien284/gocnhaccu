@@ -126,15 +126,10 @@ foreach ($galleryRows as $row) {
           Tuyển chọn trực tiếp từ các xưởng chế tác thủ công danh tiếng thế giới. Mỗi thớ gỗ vân sam, mun đen hay cẩm lai được ủ sấy tự nhiên qua nhiều năm để mang đến dải tần thoát âm thuần khiết nhất.
         </p>
 
-        <div class="flex flex-wrap items-center gap-4">
+        <div class="flex flex-wrap items-center justify-end gap-4">
           <a href="sanpham.php" class="bg-[#8C5835] hover:bg-[#724324] text-white font-semibold text-xs px-6 py-3.5 rounded-xl transition shadow-lg shadow-[#8C5835]/30 flex items-center gap-2">
             <span>Khám Phá Toàn Bộ Nhạc Cụ</span>
             <i data-lucide="arrow-right" class="w-4 h-4"></i>
-          </a>
-          
-          <a href="khuyen-mai.php" class="bg-white/10 hover:bg-white/20 text-[#EFE7DF] font-semibold text-xs px-5 py-3.5 rounded-xl transition border border-white/15 flex items-center gap-2 backdrop-blur-sm">
-            <i data-lucide="gift" class="w-4 h-4 text-[#E0D2C4]"></i>
-            <span>Xem Gói Quà Tặng Luthier</span>
           </a>
         </div>
       </div>
@@ -211,6 +206,13 @@ foreach ($galleryRows as $row) {
 
   <!-- 3. DEAL CHỚP NHOÁNG (Lấy từ CSDL) -->
   <?php if ($deal_product): ?>
+  <?php
+  // Deal kết thúc vào cuối ngày hôm nay (giờ Việt Nam), sang ngày mới đếm lại từ đầu
+  $dealTz = new DateTimeZone('Asia/Ho_Chi_Minh');
+  $dealNow = new DateTime('now', $dealTz);
+  $dealEnd = new DateTime('tomorrow', $dealTz);
+  $dealRemaining = max(0, $dealEnd->getTimestamp() - $dealNow->getTimestamp());
+  ?>
   <section class="max-w-7xl mx-auto px-6 py-6">
     <div class="bg-white rounded-2xl border border-[#E7E0D8] p-6 shadow-sm relative">
       <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-[#E7E0D8] pb-4 mb-4">
@@ -218,11 +220,11 @@ foreach ($galleryRows as $row) {
           <span class="text-[10px] font-bold uppercase tracking-wider text-white bg-[#8C5835] px-2.5 py-1 rounded-full">⚡ DEAL CHỚP NHOÁNG CỤC SỐC (24H)</span>
           <h2 class="text-lg font-bold text-[#2D2319] font-serif mt-2">Sản phẩm kỹ thuật phòng thu hot nhất hôm nay</h2>
         </div>
-        <div class="flex items-center gap-2 text-xs font-bold text-[#7A6F64] mt-3 md:mt-0">
+        <div class="flex items-center gap-2 text-xs font-bold text-[#7A6F64] mt-3 md:mt-0" id="deal-countdown" role="timer" aria-live="off">
           <span>KẾT THÚC SAU:</span>
-          <span class="bg-[#2D2319] text-white px-2 py-1 rounded">05</span> :
-          <span class="bg-[#2D2319] text-white px-2 py-1 rounded">42</span> :
-          <span class="bg-[#2D2319] text-white px-2 py-1 rounded">09</span>
+          <span id="deal-hours" class="bg-[#2D2319] text-white px-2 py-1 rounded min-w-[2rem] text-center tabular-nums"><?= sprintf('%02d', intdiv($dealRemaining, 3600)) ?></span> :
+          <span id="deal-minutes" class="bg-[#2D2319] text-white px-2 py-1 rounded min-w-[2rem] text-center tabular-nums"><?= sprintf('%02d', intdiv($dealRemaining % 3600, 60)) ?></span> :
+          <span id="deal-seconds" class="bg-[#2D2319] text-white px-2 py-1 rounded min-w-[2rem] text-center tabular-nums"><?= sprintf('%02d', $dealRemaining % 60) ?></span>
         </div>
       </div>
 
@@ -287,6 +289,35 @@ foreach ($galleryRows as $row) {
         </div>
       </div>
     </div>
+    <script>
+      // Đồng hồ đếm ngược Deal chớp nhoáng
+      (function () {
+        var hEl = document.getElementById('deal-hours');
+        var mEl = document.getElementById('deal-minutes');
+        var sEl = document.getElementById('deal-seconds');
+        if (!hEl || !mEl || !sEl) return;
+
+        var remaining = <?= (int)$dealRemaining ?>; // số giây còn lại tính từ lúc tải trang
+        var startedAt = Date.now();
+
+        function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+        function tick() {
+          var left = remaining - Math.floor((Date.now() - startedAt) / 1000);
+          if (left <= 0) {            // hết giờ: bắt đầu lượt deal 24h mới
+            remaining = 86400;
+            startedAt = Date.now();
+            left = remaining;
+          }
+          hEl.textContent = pad(Math.floor(left / 3600));
+          mEl.textContent = pad(Math.floor((left % 3600) / 60));
+          sEl.textContent = pad(left % 60);
+        }
+
+        tick();
+        setInterval(tick, 1000);
+      })();
+    </script>
   </section>
   <?php endif; ?>
 
@@ -353,32 +384,18 @@ foreach ($galleryRows as $row) {
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
-        <a href="sanpham.php?loai[]=Guitar" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
+        <a href="sanpham.php?loai[]=Guitar+%26+Ukulele" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
           <div class="h-14 flex items-center justify-center mb-2 bg-[#FBF8F5] rounded-xl text-[#8C5835] group-hover:bg-[#8C5835] group-hover:text-white transition">
             <i data-lucide="music" class="w-6 h-6"></i>
           </div>
-          <span class="font-bold text-xs text-[#2D2319] block">Guitar</span>
+          <span class="font-bold text-xs text-[#2D2319] block">Guitar & Ukulele</span>
         </a>
 
-        <a href="sanpham.php?loai[]=Organ" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
-          <div class="h-14 flex items-center justify-center mb-2 bg-[#FBF8F5] rounded-xl text-[#8C5835] group-hover:bg-[#8C5835] group-hover:text-white transition">
-            <i data-lucide="disc" class="w-6 h-6"></i>
-          </div>
-          <span class="font-bold text-xs text-[#2D2319] block">Organ / Keyboard</span>
-        </a>
-
-        <a href="sanpham.php?loai[]=Trống" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
-          <div class="h-14 flex items-center justify-center mb-2 bg-[#FBF8F5] rounded-xl text-[#8C5835] group-hover:bg-[#8C5835] group-hover:text-white transition">
-            <i data-lucide="activity" class="w-6 h-6"></i>
-          </div>
-          <span class="font-bold text-xs text-[#2D2319] block">Trống</span>
-        </a>
-
-        <a href="sanpham.php?loai[]=Piano" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
+        <a href="sanpham.php?loai[]=Piano+%26+Organ" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
           <div class="h-14 flex items-center justify-center mb-2 bg-[#FBF8F5] rounded-xl text-[#8C5835] group-hover:bg-[#8C5835] group-hover:text-white transition">
             <i data-lucide="sliders" class="w-6 h-6"></i>
           </div>
-          <span class="font-bold text-xs text-[#2D2319] block">Piano</span>
+          <span class="font-bold text-xs text-[#2D2319] block">Piano & Organ</span>
         </a>
 
         <a href="sanpham.php?loai[]=Violin" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
@@ -388,7 +405,21 @@ foreach ($galleryRows as $row) {
           <span class="font-bold text-xs text-[#2D2319] block">Violin</span>
         </a>
 
-        <a href="sanpham.php?loai[]=Phụ+kiện" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
+        <a href="sanpham.php?loai[]=S%C3%A1o" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
+          <div class="h-14 flex items-center justify-center mb-2 bg-[#FBF8F5] rounded-xl text-[#8C5835] group-hover:bg-[#8C5835] group-hover:text-white transition">
+            <i data-lucide="wind" class="w-6 h-6"></i>
+          </div>
+          <span class="font-bold text-xs text-[#2D2319] block">Sáo</span>
+        </a>
+
+        <a href="sanpham.php?loai[]=Tr%E1%BB%91ng" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
+          <div class="h-14 flex items-center justify-center mb-2 bg-[#FBF8F5] rounded-xl text-[#8C5835] group-hover:bg-[#8C5835] group-hover:text-white transition">
+            <i data-lucide="activity" class="w-6 h-6"></i>
+          </div>
+          <span class="font-bold text-xs text-[#2D2319] block">Trống</span>
+        </a>
+
+        <a href="sanpham.php?loai[]=Ph%E1%BB%A5+ki%E1%BB%87n" class="p-4 border border-[#E7E0D8] rounded-2xl hover:border-[#8C5835] hover:bg-[#FBF8F5] transition group">
           <div class="h-14 flex items-center justify-center mb-2 bg-[#FBF8F5] rounded-xl text-[#8C5835] group-hover:bg-[#8C5835] group-hover:text-white transition">
             <i data-lucide="mic" class="w-6 h-6"></i>
           </div>

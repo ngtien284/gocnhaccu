@@ -19,7 +19,7 @@ $sortBy           = isset($_GET['sort']) ? trim($_GET['sort']) : 'moi_nhat';
 // ĐÓN NHẬN TỪ KHÓA TÌM KIẾM TRỰC TIẾP TRONG TRANG
 $keyword          = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
 
-$allowedTypes     = ['Guitar', 'Organ', 'Trống', 'Ukulele', 'Violin', 'Piano', 'Phụ kiện'];
+$allowedTypes     = ['Piano & Organ', 'Guitar & Ukulele', 'Violin', 'Sáo', 'Trống', 'Phụ kiện'];
 $selectedTypes    = array_values(array_intersect($allowedTypes, $selectedTypes));
 
 // Đón nhận từ khóa từ cả 2 dạng (?keyword=... hoặc ?q=...)
@@ -82,14 +82,21 @@ $allRows = array_merge($nhacCuRows, $phuKienRows);
 
 
 // Hàm chuẩn hóa loại sản phẩm
-function normalize_product_type($category) {
-    $cat = mb_strtolower(trim((string)$category), 'UTF-8');
-    if (strpos($cat, 'guitar') !== false) return 'Guitar';
-    if (strpos($cat, 'organ') !== false || strpos($cat, 'keyboard') !== false) return 'Organ';
-    if (strpos($cat, 'trống') !== false || strpos($cat, 'drum') !== false) return 'Trống';
-    if (strpos($cat, 'ukulele') !== false) return 'Ukulele';
-    if (strpos($cat, 'violin') !== false || strpos($cat, 'vĩ cầm') !== false) return 'Violin';
-    if (strpos($cat, 'piano') !== false) return 'Piano';
+function normalize_product_type($category, $name = '') {
+    // Ưu tiên tên sản phẩm (vì loại "Ukulele & Violin" trong CSDL gộp chung hai nhóm),
+    // nếu tên không nhận ra được thì mới xét tên loại.
+    foreach ([(string)$name, (string)$category] as $source) {
+        $text = mb_strtolower(trim($source), 'UTF-8');
+        if ($text === '') continue;
+
+        if (preg_match('/(^|[^\p{L}])sáo([^\p{L}]|$)|flute/u', $text)) return 'Sáo';
+        if (strpos($text, 'violin') !== false && strpos($text, 'ukulele') === false) return 'Violin';
+        if (strpos($text, 'vĩ cầm') !== false) return 'Violin';
+        if (strpos($text, 'guitar') !== false || strpos($text, 'ukulele') !== false) return 'Guitar & Ukulele';
+        if (strpos($text, 'trống') !== false || strpos($text, 'drum') !== false) return 'Trống';
+        if (strpos($text, 'piano') !== false || strpos($text, 'organ') !== false || strpos($text, 'keyboard') !== false) return 'Piano & Organ';
+    }
+
     return trim((string)$category);
 }
 
@@ -99,7 +106,7 @@ $typeCounts  = [];
 
 foreach ($allRows as $r) {
     $bName = trim($r['brand'] ?? 'Khác');
-    $cName = ($r['product_type'] === 'phukien') ? 'Phụ kiện' : normalize_product_type($r['category']);
+    $cName = ($r['product_type'] === 'phukien') ? 'Phụ kiện' : normalize_product_type($r['category'], $r['name'] ?? '');
     
     $brandCounts[$bName] = ($brandCounts[$bName] ?? 0) + 1;
     $typeCounts[$cName]  = ($typeCounts[$cName] ?? 0) + 1;
@@ -119,7 +126,7 @@ foreach ($allRows as $product) {
     
     $category = ($product['product_type'] === 'phukien')
         ? 'Phụ kiện'
-        : normalize_product_type($product['category']);
+        : normalize_product_type($product['category'], $product['name'] ?? '');
         
     $brand = trim((string)$product['brand']);
     $salePrice = ($product['sale_price'] !== null && (float)$product['sale_price'] > 0)
@@ -207,7 +214,7 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
           </div>
           <h1 class="text-3xl lg:text-4xl font-extrabold tracking-tight font-serif mb-3">GÓC NHẠC CỤ</h1>
           <p class="text-xs lg:text-sm text-[#D4C7BA] leading-relaxed mb-6">
-            Xem ảnh độ phân giải cao của chính <strong class="text-white underline">xác từng cây đàn</strong> trong kho, cân nặng thực tế và từng gram; cùng biên bản kiểm tra kỹ thuật <strong class="text-white underline">55-Point Inspection</strong> trước khi đặt hàng.
+            Xem ảnh độ phân giải cao của chính xác từng cây đàn trong kho, cân nặng thực tế và từng gram; cùng biên bản kiểm tra kỹ thuật <strong class="text-white underline">55-Point Inspection</strong> trước khi đặt hàng.
           </p>
 
           <div class="flex flex-wrap items-center gap-6 text-xs border-t border-white/15 pt-4">

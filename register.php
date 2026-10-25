@@ -226,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="text-center">
               <span class="small text-muted">Đã có tài khoản? </span>
-              <a href="register.php" class="small fw-bold text-decoration-none" style="color: var(--wood-primary);">Đăng nhập ngay</a>
+              <a href="login.php" class="small fw-bold text-decoration-none" style="color: var(--wood-primary);">Đăng nhập ngay</a>
             </div>
 
           </form>

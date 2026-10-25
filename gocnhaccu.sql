@@ -317,3 +317,283 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Oct 24, 2026 at 06:03 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `gocnhaccu`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `don_hang`
+--
+
+CREATE TABLE `don_hang` (
+  `DH_Ma` int(11) NOT NULL,
+  `ND_Ma` int(11) NOT NULL,
+  `DH_NgayDat` datetime NOT NULL DEFAULT current_timestamp(),
+  `DH_TongTien` decimal(12,2) NOT NULL,
+  `DH_DiaChiNhan_TP` varchar(100) NOT NULL,
+  `DH_DiaChiNhan_PhuongXa` varchar(100) NOT NULL,
+  `DH_DiaChiNhan_SoNha` varchar(100) NOT NULL,
+  `DH_SoDTNhan` varchar(15) NOT NULL,
+  `DH_TenNguoiNhan` varchar(100) NOT NULL,
+  `DH_PhuongThucThanhToan` varchar(100) NOT NULL,
+  `DH_TrangThaiThanhToan` varchar(30) DEFAULT NULL,
+  `DH_TrangThai` varchar(30) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `don_hang`
+--
+ALTER TABLE `don_hang`
+  ADD PRIMARY KEY (`DH_Ma`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `don_hang`
+--
+ALTER TABLE `don_hang`
+  MODIFY `DH_Ma` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Oct 24, 2026 at 06:02 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `gocnhaccu`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chi_tiet_don_hang`
+--
+
+CREATE TABLE `chi_tiet_don_hang` (
+  `CTDH_Ma` int(11) NOT NULL,
+  `DH_Ma` int(11) NOT NULL,
+  `NC_Ma` int(11) NOT NULL,
+  `CTDH_SoLuongSP` int(11) NOT NULL,
+  `CTDH_Gia` decimal(12,2) NOT NULL,
+  `CTDH_ThanhTien` decimal(12,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `chi_tiet_don_hang`
+--
+ALTER TABLE `chi_tiet_don_hang`
+  ADD PRIMARY KEY (`CTDH_Ma`),
+  ADD KEY `DH_Ma` (`DH_Ma`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `chi_tiet_don_hang`
+--
+ALTER TABLE `chi_tiet_don_hang`
+  MODIFY `CTDH_Ma` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `chi_tiet_don_hang`
+--
+ALTER TABLE `chi_tiet_don_hang`
+  ADD CONSTRAINT `chi_tiet_don_hang_ibfk_1` FOREIGN KEY (`DH_Ma`) REFERENCES `don_hang` (`DH_Ma`) ON DELETE CASCADE ON UPDATE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+------------------------------------------SAO----------------------------------
+
+-- 1. Loại nhạc cụ "Sáo"
+SET @new_lnc := (SELECT IFNULL(MAX(`LNC_Ma`), 0) + 1 FROM `loainhaccu`);
+INSERT IGNORE INTO `loainhaccu` (`LNC_Ma`, `LNC_Ten`, `LNC_MoTa`)
+SELECT @new_lnc, 'Sáo', 'Sáo flute, sáo trúc và các nhạc cụ hơi'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `loainhaccu` WHERE `LNC_Ten` LIKE 'S%o');
+SET @lnc_sao := (SELECT `LNC_Ma` FROM `loainhaccu` WHERE `LNC_Ten` LIKE 'S%o' ORDER BY `LNC_Ma` LIMIT 1);
+
+-- 2. Thương hiệu Yamaha
+SET @new_th := (SELECT IFNULL(MAX(`TH_Ma`), 0) + 1 FROM `thuonghieu`);
+INSERT IGNORE INTO `thuonghieu` (`TH_Ma`, `TH_Ten`, `TH_Logo`, `TH_MoTa`)
+SELECT @new_th, 'Yamaha', 'yamaha.png', 'Thương hiệu nhạc cụ hàng đầu Nhật Bản'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `thuonghieu` WHERE `TH_Ten` LIKE 'Yamaha');
+SET @th_yamaha := (SELECT `TH_Ma` FROM `thuonghieu` WHERE `TH_Ten` LIKE 'Yamaha' ORDER BY `TH_Ma` LIMIT 1);
+
+-- 3. Thương hiệu sáo trúc truyền thống
+SET @new_th := (SELECT IFNULL(MAX(`TH_Ma`), 0) + 1 FROM `thuonghieu`);
+INSERT IGNORE INTO `thuonghieu` (`TH_Ma`, `TH_Ten`, `TH_Logo`, `TH_MoTa`)
+SELECT @new_th, 'Làng nghề Việt', NULL, 'Nhạc cụ truyền thống Việt Nam làm thủ công'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `thuonghieu` WHERE `TH_Ten` LIKE 'L%Vi%t');
+SET @th_viet := (SELECT `TH_Ma` FROM `thuonghieu` WHERE `TH_Ten` LIKE 'L%Vi%t' ORDER BY `TH_Ma` LIMIT 1);
+
+-- 4. Sáo flute Yamaha YFL-222
+SET @new_nc := (SELECT IFNULL(MAX(`NC_Ma`), 0) + 1 FROM `nhaccu`);
+INSERT INTO `nhaccu`
+  (`NC_Ma`, `LNC_Ma`, `TH_Ma`, `NC_Ten`, `NC_GiaBan`, `NC_GiaKhuyenMai`, `NC_SoLuongTon`, `NC_HinhAnh`, `NC_MoTa`, `NC_ThoiGianBaoHanh`, `NC_TrangThai`)
+SELECT @new_nc, @lnc_sao, @th_yamaha, 'Sáo Flute Yamaha YFL-222', 16500000.00, 14900000.00, 6, 'sao-flute.jpg',
+   'Sáo flute dành cho người mới học và học sinh nhạc viện. Thân ống mạ bạc, âm thanh sáng rõ, bấm phím nhẹ, đi kèm hộp đựng.',
+   12, 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `nhaccu` WHERE `NC_Ten` LIKE '%YFL-222%');
+SET @nc_flute := (SELECT `NC_Ma` FROM `nhaccu` WHERE `NC_Ten` LIKE '%YFL-222%' ORDER BY `NC_Ma` LIMIT 1);
+
+-- 5. Sáo trúc ngang 6 lỗ
+SET @new_nc := (SELECT IFNULL(MAX(`NC_Ma`), 0) + 1 FROM `nhaccu`);
+INSERT INTO `nhaccu`
+  (`NC_Ma`, `LNC_Ma`, `TH_Ma`, `NC_Ten`, `NC_GiaBan`, `NC_GiaKhuyenMai`, `NC_SoLuongTon`, `NC_HinhAnh`, `NC_MoTa`, `NC_ThoiGianBaoHanh`, `NC_TrangThai`)
+SELECT @new_nc, @lnc_sao, @th_viet, 'Sáo Trúc Ngang 6 Lỗ Thủ Công', 450000.00, 390000.00, 25, 'sao-truc.jpg',
+   'Sáo trúc ngang 6 lỗ làm thủ công từ trúc già, tiếng sáo trong, ấm, dễ thổi. Phù hợp học nhạc cụ dân tộc và biểu diễn.',
+   3, 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `nhaccu` WHERE `NC_Ten` LIKE '%6 L%Th%C%ng');
+SET @nc_truc := (SELECT `NC_Ma` FROM `nhaccu` WHERE `NC_Ten` LIKE '%6 L%Th%C%ng' ORDER BY `NC_Ma` LIMIT 1);
+
+-- 6. Thông số kỹ thuật (INSERT IGNORE: mỗi sản phẩm chỉ có 1 dòng chi tiết)
+SET @ct1 := (SELECT IFNULL(MAX(`CTSP_Ma`), 0) + 1 FROM `chitietsanpham`);
+SET @ct2 := @ct1 + 1;
+INSERT IGNORE INTO `chitietsanpham`
+  (`CTSP_Ma`, `NC_Ma`, `CTSP_ChatLieu`, `CTSP_MauSac`, `CTSP_KichThuoc`, `CTSP_TrongLuong`, `CTSP_KieuDan`, `CTSP_MoTaKyThuat`)
+VALUES
+  (@ct1, @nc_flute, 'Hợp kim mạ bạc', 'Bạc', 'Dài khoảng 67 cm', 0.50, 'Flute ngang, giọng C',
+   'Sáo flute 16 lỗ phím, thân ống mạ bạc, phù hợp người mới bắt đầu và luyện tập hằng ngày.'),
+  (@ct2, @nc_truc, 'Trúc tự nhiên', 'Vàng trúc', 'Dài khoảng 55 cm', 0.08, 'Sáo ngang 6 lỗ',
+   'Sáo trúc ngang 6 lỗ, sơn bóng chống nứt, thích hợp luyện tập và biểu diễn nhạc dân tộc.');
+
+
+------------------------------------------SAO----------------------------------
+---------------------------VIOLIN-------------------------------------
+
+-- =====================================================================
+-- THÊM 2 CÂY VIOLIN VÀO CƠ SỞ DỮ LIỆU gocnhaccu
+-- Cách dùng: phpMyAdmin > chọn database `gocnhaccu` > tab SQL > dán và chạy
+-- Script an toàn khi chạy lại: mục nào đã có thì dùng lại, không thêm trùng.
+-- =====================================================================
+
+SET NAMES utf8mb4;
+
+-- 1. Loại nhạc cụ: dùng loại "Ukulele & Violin" có sẵn (không có thì tạo "Violin")
+SET @new_lnc := (SELECT IFNULL(MAX(`LNC_Ma`), 0) + 1 FROM `loainhaccu`);
+INSERT IGNORE INTO `loainhaccu` (`LNC_Ma`, `LNC_Ten`, `LNC_MoTa`)
+SELECT @new_lnc, 'Violin', 'Đàn violin (vĩ cầm) và các nhạc cụ dây vĩ'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `loainhaccu` WHERE `LNC_Ten` LIKE '%Violin%');
+SET @lnc_violin := (SELECT `LNC_Ma` FROM `loainhaccu` WHERE `LNC_Ten` LIKE '%Violin%' ORDER BY `LNC_Ma` LIMIT 1);
+
+-- 2. Thương hiệu Yamaha
+SET @new_th := (SELECT IFNULL(MAX(`TH_Ma`), 0) + 1 FROM `thuonghieu`);
+INSERT IGNORE INTO `thuonghieu` (`TH_Ma`, `TH_Ten`, `TH_Logo`, `TH_MoTa`)
+SELECT @new_th, 'Yamaha', 'yamaha.png', 'Thương hiệu nhạc cụ hàng đầu Nhật Bản'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `thuonghieu` WHERE `TH_Ten` LIKE 'Yamaha');
+SET @th_yamaha := (SELECT `TH_Ma` FROM `thuonghieu` WHERE `TH_Ten` LIKE 'Yamaha' ORDER BY `TH_Ma` LIMIT 1);
+
+-- 3. Thương hiệu Cremona
+SET @new_th := (SELECT IFNULL(MAX(`TH_Ma`), 0) + 1 FROM `thuonghieu`);
+INSERT IGNORE INTO `thuonghieu` (`TH_Ma`, `TH_Ten`, `TH_Logo`, `TH_MoTa`)
+SELECT @new_th, 'Cremona', NULL, 'Thương hiệu đàn violin dành cho người mới học và học sinh'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `thuonghieu` WHERE `TH_Ten` LIKE 'Cremona');
+SET @th_cremona := (SELECT `TH_Ma` FROM `thuonghieu` WHERE `TH_Ten` LIKE 'Cremona' ORDER BY `TH_Ma` LIMIT 1);
+
+-- 4. Violin Yamaha V3SKA 4/4 (có giá khuyến mãi)
+SET @new_nc := (SELECT IFNULL(MAX(`NC_Ma`), 0) + 1 FROM `nhaccu`);
+INSERT INTO `nhaccu`
+  (`NC_Ma`, `LNC_Ma`, `TH_Ma`, `NC_Ten`, `NC_GiaBan`, `NC_GiaKhuyenMai`, `NC_SoLuongTon`, `NC_HinhAnh`, `NC_MoTa`, `NC_ThoiGianBaoHanh`, `NC_TrangThai`)
+SELECT @new_nc, @lnc_violin, @th_yamaha, 'Violin Yamaha V3SKA 4/4', 8200000.00, 7500000.00, 4, 'violin-yamaha.jpg',
+   'Đàn violin cỡ 4/4 dành cho người học nghiêm túc. Mặt đàn gỗ vân sam, lưng và hông gỗ thích, âm thanh ấm và đều, đi kèm hộp đàn, vĩ và nhựa thông.',
+   12, 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `nhaccu` WHERE `NC_Ten` LIKE '%V3SKA%');
+SET @nc_yamaha := (SELECT `NC_Ma` FROM `nhaccu` WHERE `NC_Ten` LIKE '%V3SKA%' ORDER BY `NC_Ma` LIMIT 1);
+
+-- 5. Violin Cremona SV-75 4/4
+SET @new_nc := (SELECT IFNULL(MAX(`NC_Ma`), 0) + 1 FROM `nhaccu`);
+INSERT INTO `nhaccu`
+  (`NC_Ma`, `LNC_Ma`, `TH_Ma`, `NC_Ten`, `NC_GiaBan`, `NC_GiaKhuyenMai`, `NC_SoLuongTon`, `NC_HinhAnh`, `NC_MoTa`, `NC_ThoiGianBaoHanh`, `NC_TrangThai`)
+SELECT @new_nc, @lnc_violin, @th_cremona, 'Violin Cremona SV-75 4/4', 4500000.00, NULL, 8, 'violin-cremona.jpg',
+   'Đàn violin cỡ 4/4 phù hợp học sinh và người mới bắt đầu. Mặt đàn gỗ vân sam, âm thanh sáng, giá thành hợp lý, đi kèm hộp đàn và vĩ.',
+   12, 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `nhaccu` WHERE `NC_Ten` LIKE '%SV-75%');
+SET @nc_cremona := (SELECT `NC_Ma` FROM `nhaccu` WHERE `NC_Ten` LIKE '%SV-75%' ORDER BY `NC_Ma` LIMIT 1);
+
+-- 6. Thông số kỹ thuật (INSERT IGNORE: mỗi sản phẩm chỉ có 1 dòng chi tiết)
+SET @ct1 := (SELECT IFNULL(MAX(`CTSP_Ma`), 0) + 1 FROM `chitietsanpham`);
+SET @ct2 := @ct1 + 1;
+INSERT IGNORE INTO `chitietsanpham`
+  (`CTSP_Ma`, `NC_Ma`, `CTSP_ChatLieu`, `CTSP_MauSac`, `CTSP_KichThuoc`, `CTSP_TrongLuong`, `CTSP_SoDay`, `CTSP_ChatLieuDay`, `CTSP_ChatLieuThan`, `CTSP_ChatLieuCan`, `CTSP_KieuDan`, `CTSP_CoDan`, `CTSP_MoTaKyThuat`)
+VALUES
+  (@ct1, @nc_yamaha, 'Gỗ', 'Nâu vàng bóng', 'Dài thân đàn khoảng 35.5 cm', 0.45, 4, 'Hợp kim', 'Mặt vân sam, lưng và hông gỗ thích', 'Gỗ thích', 'Violin Acoustic', '4/4',
+   'Violin 4 dây cỡ 4/4, mặt đàn gỗ vân sam, lưng và hông gỗ thích, phù hợp người học nghiêm túc.'),
+  (@ct2, @nc_cremona, 'Gỗ', 'Nâu bóng', 'Dài thân đàn khoảng 35.5 cm', 0.45, 4, 'Hợp kim', 'Mặt vân sam, lưng và hông gỗ thích', 'Gỗ thích', 'Violin Acoustic', '4/4',
+   'Violin 4 dây cỡ 4/4, mặt đàn gỗ vân sam, phù hợp học sinh và người mới bắt đầu.');
+
+-- 7. Kiểm tra kết quả
+SELECT nc.NC_Ma, nc.NC_Ten, lnc.LNC_Ma, lnc.LNC_Ten, th.TH_Ten, nc.NC_GiaBan, nc.NC_GiaKhuyenMai, nc.NC_HinhAnh
+FROM `nhaccu` nc
+JOIN `loainhaccu` lnc ON nc.LNC_Ma = lnc.LNC_Ma
+JOIN `thuonghieu` th  ON nc.TH_Ma  = th.TH_Ma
+WHERE nc.NC_Ma IN (@nc_yamaha, @nc_cremona);
+---------------------------VIOLIN---------------------------------
