@@ -3,12 +3,12 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-define('SITE_NAME', 'HARMONY Acoustic & Fine Instruments');
+define('SITE_NAME', 'GOCNHACCU Acoustic & Fine Instruments');
 define('SITE_HOTLINE', '1900 8888');
 
 // Bổ sung các hằng số mà footer đang cần:
 define('SITE_ADDRESS', '123 Đường Nhạc Cụ, Quận 1, TP. Hồ Chí Minh');
-define('SITE_EMAIL', 'support@harmony.vn');
+define('SITE_EMAIL', 'support@gocnhaccu.vn');
 define('SITE_WORKING_HOURS', '8:00 - 21:00 (Thứ Hai - Chủ Nhật)');
 
 // Định nghĩa hàm format tiền tệ VND nếu chưa có
