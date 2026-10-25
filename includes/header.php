@@ -95,7 +95,7 @@ if (!function_exists('is_active_page')) {
 
       <!-- Thanh tìm kiếm -->
       <div class="flex-1 max-w-xl relative">
-        <form action="san-pham.php" method="GET">
+        <form action="sanpham.php" method="GET">
           <input type="text" name="q" placeholder="Tìm guitar mộc, grand piano, dây elixir, amply đèn..." 
                  value="<?= isset($_GET['q']) ? htmlspecialchars($_GET['q']) : '' ?>"
                  class="w-full bg-white border border-[#E7E0D8] rounded-full py-2.5 pl-11 pr-24 text-sm text-[#2D2319] placeholder-[#9E948A] focus:outline-none focus:ring-2 focus:ring-[#8C5835]/30 focus:border-[#8C5835] transition shadow-sm" />
@@ -114,10 +114,10 @@ if (!function_exists('is_active_page')) {
         </a>
 
         <!-- Icon giỏ hàng -->
-        <a href="cart.php" class="w-10 h-10 rounded-full border border-[#E7E0D8] bg-white flex items-center justify-center text-[#5C5349] hover:text-[#8C5835] hover:border-[#8C5835] transition relative shadow-sm" title="Xem giỏ hàng">
-          <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+        <a href="gio-hang.php" class="w-10 h-10 rounded-full border border-[#E7E0D8] bg-white flex items-center justify-center text-[#5C5349] hover:text-[#8C5835] hover:border-[#8C5835] transition relative shadow-sm" title="Xem giỏ hàng">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i>
           <span class="absolute -top-1 -right-1 bg-[#8C5835] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow">
-            <?= isset($_SESSION['cart_count']) ? $_SESSION['cart_count'] : '3' ?>
+            <?= isset($_SESSION['gio_hang']) ? count($_SESSION['gio_hang']) : 0 ?>
           </span>
         </a>
 
@@ -143,10 +143,10 @@ if (!function_exists('is_active_page')) {
     <div class="border-t border-[#E7E0D8] bg-[#FDFBF9]">
       <div class="max-w-7xl mx-auto px-6 flex items-center gap-8 text-sm py-2.5 overflow-x-auto">
         <a href="index.php" class="<?= is_active_page('index') ?>">Trang Chủ</a>
-        <a href="san-pham.php" class="<?= is_active_page('san-pham') ?>">Tất Cả Nhạc Cụ</a>
-        <a href="san-pham.php?cat=guitar" class="text-[#5C5349] hover:text-[#8C5835] transition font-medium">Guitars & Bass</a>
-        <a href="san-pham.php?cat=piano" class="text-[#5C5349] hover:text-[#8C5835] transition font-medium">Piano & Keyboards</a>
-        <a href="san-pham.php?cat=strings" class="text-[#5C5349] hover:text-[#8C5835] transition font-medium">Violin & Đàn Dây</a>
+        <a href="sanpham.php" class="<?= is_active_page('sanpham') ?>">Tất Cả Nhạc Cụ</a>
+        <a href="sanpham.php?cat=guitar" class="text-[#5C5349] hover:text-[#8C5835] transition font-medium">Guitars & Bass</a>
+        <a href="sanpham.php?cat=piano" class="text-[#5C5349] hover:text-[#8C5835] transition font-medium">Piano & Keyboards</a>
+        <a href="sanpham.php?cat=strings" class="text-[#5C5349] hover:text-[#8C5835] transition font-medium">Violin & Đàn Dây</a>
         <a href="khuyen-mai.php" class="<?= is_active_page('khuyen-mai') ?>">Khuyến Mãi & Voucher</a>
       </div>
     </div>
