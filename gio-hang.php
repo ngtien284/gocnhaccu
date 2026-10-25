@@ -8,6 +8,35 @@ if (!isset($_SESSION['gio_hang'])) {
     $_SESSION['gio_hang'] = [];
 }
 
+// XỬ LÝ CẬP NHẬT HOẶC XÓA SẢN PHẨM TRONG GIỎ HÀNG
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cart_action'])) {
+    $cartKey = $_POST['cart_key'] ?? '';
+    $action = $_POST['cart_action'] ?? '';
+
+    if ($action === 'remove_all') {
+        $_SESSION['gio_hang'] = [];
+    } elseif (isset($_SESSION['gio_hang'][$cartKey])) {
+        if ($action === 'increase') {
+            $currentStock = (int)($_SESSION['gio_hang'][$cartKey]['ton_kho'] ?? 999);
+            if ($_SESSION['gio_hang'][$cartKey]['so_luong'] < $currentStock) {
+                $_SESSION['gio_hang'][$cartKey]['so_luong']++;
+            } else {
+                $_SESSION['cart_message'] = 'Số lượng đặt đã đạt tối đa tồn kho.';
+            }
+        } elseif ($action === 'decrease') {
+            $_SESSION['gio_hang'][$cartKey]['so_luong']--;
+            if ($_SESSION['gio_hang'][$cartKey]['so_luong'] <= 0) {
+                unset($_SESSION['gio_hang'][$cartKey]);
+            }
+        } elseif ($action === 'remove') {
+            unset($_SESSION['gio_hang'][$cartKey]);
+        }
+    }
+
+    header('Location: gio-hang.php');
+    exit;
+}
+
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && ($_POST['action'] ?? '') === 'add'
@@ -65,7 +94,7 @@ if (
     } else {
         $id = (int)$product['NC_Ma'];
         
-        // Tạo khóa duy nhất (cartKey) để phân biệt nhạc cụ và phụ kiện có cùng ID (ví dụ: nhaccu_1 khác phukien_1)
+        // Tạo khóa duy nhất (cartKey) để phân biệt nhạc cụ và phụ kiện có cùng ID
         $cartKey = $productType . '_' . $id;
 
         $currentQty = (int)($_SESSION['gio_hang'][$cartKey]['so_luong'] ?? 0);
@@ -90,7 +119,7 @@ if (
 
             $_SESSION['gio_hang'][$cartKey] = [
                 'ma'          => $id,
-                'loai'        => $productType, // Lưu thêm phân loại để dễ quản lý
+                'loai'        => $productType,
                 'ten'         => $product['NC_Ten'],
                 'thuong_hieu' => $product['TH_Ten'] ?? '',
                 'mo_ta'       => $product['NC_MoTa'] ?? '',
@@ -118,21 +147,19 @@ if (!function_exists('format_vnd')) {
 // Kiểm tra trạng thái đăng nhập
 $is_logged_in = isset($_SESSION['user']) && !empty($_SESSION['user']);
 
-// XỬ LÝ KHI BẤM NÚT THANH TOÁN (Phải đặt trước khi gọi header.php)
+// XỬ LÝ KHI BẤM NÚT THANH TOÁN
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'checkout') {
     if (!$is_logged_in) {
-        // Lưu lại trang giỏ hàng để sau khi đăng nhập xong nhảy ngược về đây
         $_SESSION['redirect_after_login'] = 'gio-hang.php';
-        header("Location: dang-nhap.php");
+        header("Location: login.php");
         exit;
     } else {
-        // Xử lý đặt hàng thành công
-        echo "<script>alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại Harmony.'); window.location.href='index.php';</script>";
+        echo "<script>alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại GOCNHACCU.'); window.location.href='index.php';</script>";
         exit;
     }
 }
 
-// Gọi file header giao diện sau khi đã xử lý xong chuyển hướng (header redirect)
+// Gọi file header giao diện
 $page_title = "Giỏ Hàng & Thẩm Định Đơn Hàng";
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/config/app.php';
@@ -140,8 +167,10 @@ require_once __DIR__ . '/config/app.php';
 
 $cart_items = [];
 
-foreach ($_SESSION['gio_hang'] ?? [] as $item) {
+// Duyệt mảng session kèm theo key ($cartKey) để làm định danh cập nhật
+foreach ($_SESSION['gio_hang'] ?? [] as $key => $item) {
     $cart_items[] = [
+        'cart_key' => $key,
         'id'       => $item['ma'],
         'brand'    => $item['thuong_hieu'] ?? '',
         'name'     => $item['ten'],
@@ -155,7 +184,7 @@ foreach ($_SESSION['gio_hang'] ?? [] as $item) {
     ];
 }
 
-// === BỔ SUNG ĐOẠN TRUY VẤN LẤY PHỤ KIỆN MUA KÈM TỪ BẢNG nhaccuphukien ===
+// === TRUY VẤN LẤY PHỤ KIỆN MUA KÈM TỪ BẢNG nhaccuphukien ===
 $cross_sell = [];
 try {
     $ncIds = [];
@@ -186,7 +215,6 @@ try {
         $stmtCS = $conn->prepare($sqlCrossSell);
         $stmtCS->execute($ncIds);
     } else {
-        // Nếu giỏ hàng chưa có nhạc cụ, hiển thị mặc định phụ kiện nổi bật
         $sqlCrossSell = "
             SELECT 
                 pk.PK_Ma AS id,
@@ -228,41 +256,28 @@ try {
 } catch (Exception $e) {
     $cross_sell = [];
 }
-// ======================================================================
 
-  // Tính hóa đơn theo sản phẩm thực tế trong giỏ hàng
+// Tính hóa đơn theo sản phẩm thực tế trong giỏ hàng
 $subtotal = 0;
-
-foreach ($cart_items as $item) {
-    $subtotal += (float)$item['price'] * (int)$item['qty'];
-}
-  // Tính hóa đơn theo sản phẩm thực tế trong giỏ hàng
-$subtotal = 0;
-
 foreach ($cart_items as $item) {
     $subtotal += (float)$item['price'] * (int)$item['qty'];
 }
 
-// Giữ mức giảm giá 500.000đ như giao diện cũ
 $discount = !empty($cart_items) ? 500000 : 0;
-
-// Phí vận chuyển miễn phí
 $shipping = 0;
-
-// Tổng thanh toán không được âm
 $total = max(0, $subtotal - $discount + $shipping);
 ?>
 
 <main class="flex-1 bg-[#FBF8F5] text-[#2D2319] font-sans">
   <?php if (!empty($_SESSION['cart_message'])): ?>
     <div class="max-w-7xl mx-auto px-6 pt-4">
-        <div class="bg-emerald-50 text-emerald-800
-                    border border-emerald-200 rounded-xl p-3">
+        <div class="bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl p-3">
             <?= htmlspecialchars($_SESSION['cart_message']) ?>
         </div>
     </div>
     <?php unset($_SESSION['cart_message']); ?>
-<?php endif; ?>
+  <?php endif; ?>
+
   <!-- Breadcrumb & Top Indicator -->
   <section class="max-w-7xl mx-auto px-6 pt-5 pb-3">
     <div class="flex items-center justify-between text-xs text-[#7A6F64]">
@@ -308,81 +323,86 @@ $total = max(0, $subtotal - $discount + $shipping);
             Thiết Bị Đã Chọn
             <span class="bg-[#8C5835] text-white text-xs px-2.5 py-0.5 rounded-full font-sans font-bold"><?= count($cart_items) ?></span>
           </h2>
-          <button class="text-xs text-[#7A6F64] hover:text-red-600 transition flex items-center gap-1">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa tất cả
-          </button>
+          <?php if (!empty($cart_items)): ?>
+            <form method="POST" action="">
+              <input type="hidden" name="cart_action" value="remove_all">
+              <button type="submit" onclick="return confirm('Bạn có chắc muốn xóa tất cả sản phẩm trong giỏ hàng?');" class="text-xs text-[#7A6F64] hover:text-red-600 transition flex items-center gap-1 bg-transparent border-0 cursor-pointer">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa tất cả
+              </button>
+            </form>
+          <?php endif; ?>
         </div>
 
         <!-- LIST SẢN PHẨM GIỎ HÀNG -->
         <div class="space-y-4">
-          <?php foreach ($cart_items as $item): ?>
-            <div class="bg-white rounded-2xl border border-[#E7E0D8] p-5 shadow-sm hover:border-[#8C5835]/40 transition">
-              <div class="flex flex-col sm:flex-row items-start gap-4">
-                
-                <!-- Ảnh thiết bị -->
-                <div class="w-24 h-24 rounded-xl bg-[#FBF8F5] border border-[#E7E0D8] p-2 shrink-0 flex items-center justify-center">
-                  <img src="<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" class="w-full h-full object-contain"/>
-                </div>
-
-                <!-- Chi tiết sản phẩm -->
-                <div class="flex-1">
-                  <div class="flex items-start justify-between gap-2">
-                    <div>
-                      <span class="text-[10px] font-bold text-[#8C5835] uppercase tracking-wider block mb-0.5"><?= htmlspecialchars($item['brand']) ?></span>
-                      <h3 class="font-bold text-sm text-[#2D2319] leading-snug"><?= htmlspecialchars($item['name']) ?></h3>
-                    </div>
-                    <span class="text-base font-black text-[#8C5835] shrink-0"><?= format_vnd($item['price']) ?></span>
+          <?php if (empty($cart_items)): ?>
+            <div class="bg-white rounded-2xl border border-[#E7E0D8] p-8 text-center text-[#7A6F64]">
+              <p class="mb-4">Giỏ hàng của bạn đang trống.</p>
+              <a href="index.php" class="inline-block bg-[#8C5835] text-white px-5 py-2.5 rounded-xl font-bold text-xs">Tiếp tục mua sắm</a>
+            </div>
+          <?php else: ?>
+            <?php foreach ($cart_items as $item): ?>
+              <div class="bg-white rounded-2xl border border-[#E7E0D8] p-5 shadow-sm hover:border-[#8C5835]/40 transition">
+                <div class="flex flex-col sm:flex-row items-start gap-4">
+                  
+                  <!-- Ảnh thiết bị -->
+                  <div class="w-24 h-24 rounded-xl bg-[#FBF8F5] border border-[#E7E0D8] p-2 shrink-0 flex items-center justify-center">
+                    <img src="<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" class="w-full h-full object-contain"/>
                   </div>
 
-                  <p class="text-xs text-[#7A6F64] leading-relaxed mt-1 mb-2"><?= htmlspecialchars($item['detail']) ?></p>
-
-                  <!-- Badge quà tặng hoặc chi tiết đặc biệt -->
-                  <?php if (!empty($item['gift'])): ?>
-                    <div class="bg-[#EFE7DF] border border-[#E0D2C4] rounded-lg p-2 text-[11px] font-bold text-[#8C5835] mb-2 flex items-center gap-1.5">
-                      <i data-lucide="gift" class="w-3.5 h-3.5 shrink-0"></i>
-                      <span><?= htmlspecialchars($item['gift']) ?></span>
-                    </div>
-                    <p class="text-[10px] text-[#7A6F64] mb-2"><?= htmlspecialchars($item['sub_detail']) ?></p>
-                  <?php endif; ?>
-
-                  <!-- Addon Sales Engineer tư vấn (nếu có) -->
-                  <?php if (!empty($item['has_addon'])): ?>
-                    <div class="bg-[#FBF8F5] border border-[#E7E0D8] rounded-xl p-3 mb-3 text-xs">
-                      <label class="flex items-start gap-2.5 font-bold text-[#2D2319] cursor-pointer">
-                        <input type="checkbox" checked class="rounded text-[#8C5835] focus:ring-[#8C5835] mt-0.5"/>
-                        <span><?= htmlspecialchars($item['addon_text']) ?></span>
-                      </label>
-                      <p class="text-[11px] text-[#7A6F64] ml-6 mt-1 leading-relaxed">
-                        <?= htmlspecialchars($item['addon_desc']) ?>
-                      </p>
-                    </div>
-                  <?php endif; ?>
-
-                  <!-- Bottom Toolbar sản phẩm -->
-                  <div class="flex items-center justify-between pt-3 border-t border-[#E7E0D8]/60 text-xs">
-                    <div class="flex items-center gap-3">
-                      <div class="flex items-center border border-[#E7E0D8] rounded-lg bg-[#FBF8F5]">
-                        <button class="px-2.5 py-1 text-[#7A6F64] hover:text-[#2D2319] font-bold">-</button>
-                        <span class="px-3 py-1 font-bold text-[#2D2319] text-xs"><?= $item['qty'] ?></span>
-                        <button class="px-2.5 py-1 text-[#7A6F64] hover:text-[#2D2319] font-bold">+</button>
+                  <!-- Chi tiết sản phẩm -->
+                  <div class="flex-1">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <span class="text-[10px] font-bold text-[#8C5835] uppercase tracking-wider block mb-0.5"><?= htmlspecialchars($item['brand']) ?></span>
+                        <h3 class="font-bold text-sm text-[#2D2319] leading-snug"><?= htmlspecialchars($item['name']) ?></h3>
                       </div>
-                      <button class="text-[#7A6F64] hover:text-[#8C5835] flex items-center gap-1 font-medium">
-                        <i data-lucide="heart" class="w-3.5 h-3.5"></i> Lưu lại sau
-                      </button>
-                      <button class="text-[#7A6F64] hover:text-red-600 flex items-center gap-1 font-medium">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa
-                      </button>
+                      <span class="text-base font-black text-[#8C5835] shrink-0"><?= format_vnd($item['price']) ?></span>
                     </div>
 
-                    <span class="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      ✓ <?= htmlspecialchars($item['stock']) ?>
-                    </span>
-                  </div>
+                    <p class="text-xs text-[#7A6F64] leading-relaxed mt-1 mb-2"><?= htmlspecialchars($item['detail']) ?></p>
 
+                    <!-- Bottom Toolbar sản phẩm (Tăng, giảm, xóa) -->
+                    <div class="flex items-center justify-between pt-3 border-t border-[#E7E0D8]/60 text-xs">
+                      <div class="flex items-center gap-3">
+                        <div class="flex items-center border border-[#E7E0D8] rounded-lg bg-[#FBF8F5]">
+                          <!-- Nút GIẢM số lượng -->
+                          <form method="POST" action="" class="inline">
+                            <input type="hidden" name="cart_key" value="<?= htmlspecialchars($item['cart_key']) ?>">
+                            <input type="hidden" name="cart_action" value="decrease">
+                            <button type="submit" class="px-2.5 py-1 text-[#7A6F64] hover:text-[#2D2319] font-bold bg-transparent border-0 cursor-pointer">-</button>
+                          </form>
+
+                          <span class="px-3 py-1 font-bold text-[#2D2319] text-xs"><?= $item['qty'] ?></span>
+
+                          <!-- Nút TĂNG số lượng -->
+                          <form method="POST" action="" class="inline">
+                            <input type="hidden" name="cart_key" value="<?= htmlspecialchars($item['cart_key']) ?>">
+                            <input type="hidden" name="cart_action" value="increase">
+                            <button type="submit" class="px-2.5 py-1 text-[#7A6F64] hover:text-[#2D2319] font-bold bg-transparent border-0 cursor-pointer">+</button>
+                          </form>
+                        </div>
+
+                        <!-- Nút XÓA từng sản phẩm -->
+                        <form method="POST" action="" class="inline">
+                          <input type="hidden" name="cart_key" value="<?= htmlspecialchars($item['cart_key']) ?>">
+                          <input type="hidden" name="cart_action" value="remove">
+                          <button type="submit" class="text-[#7A6F64] hover:text-red-600 flex items-center gap-1 font-medium bg-transparent border-0 cursor-pointer">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa
+                          </button>
+                        </form>
+                      </div>
+
+                      <span class="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        ✓ <?= htmlspecialchars($item['stock']) ?>
+                      </span>
+                    </div>
+
+                  </div>
                 </div>
               </div>
-            </div>
-          <?php endforeach; ?>
+            <?php endforeach; ?>
+          <?php endif; ?>
         </div>
 
         <!-- CARD KHUNG SALES ENGINEER HỖ TRỢ TRỰC TIẾP GIỎ HÀNG -->
@@ -530,7 +550,7 @@ $total = max(0, $subtotal - $discount + $shipping);
             
             <!-- Khung tổng đài nhanh -->
             <a href="tel:18008888" class="bg-gradient-to-r from-[#2D2319] to-[#4A382C] text-white p-3 rounded-xl block shadow transition hover:opacity-95">
-              <span class="text-[9px] uppercase tracking-wider text-[#D4C7BA] block font-semibold">CẦN TƯ VẤN TRƯỚC KHU QUẸT THẺ?</span>
+              <span class="text-[9px] uppercase tracking-wider text-[#D4C7BA] block font-semibold">CẦN TƯ VẤN TRƯỚC KHU QUỆT THẺ?</span>
               <strong class="text-sm font-bold block text-[#E0D2C4] mt-0.5">1800 8888 (Miễn cước)</strong>
             </a>
           </div>
