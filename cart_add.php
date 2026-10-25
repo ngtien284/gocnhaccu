@@ -34,5 +34,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['id'])) {
 }
 
 // Chuyển hướng sang trang giỏ hàng
-header("Location: cart.php");
+header("Location: gio-hang.php");
 exit;
