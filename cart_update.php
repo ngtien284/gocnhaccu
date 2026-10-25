@@ -28,5 +28,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-header("Location: cart.php");
+header("Location: gio-hang.php");
 exit;
