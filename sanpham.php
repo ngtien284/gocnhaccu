@@ -1,4 +1,9 @@
 <?php
+// sanpham.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/app.php';
@@ -11,10 +16,36 @@ $maxPrice         = isset($_GET['gia_den']) && $_GET['gia_den'] !== '' ? max(0, 
 $hideOutOfStock   = !empty($_GET['instock']);
 $sortBy           = isset($_GET['sort']) ? trim($_GET['sort']) : 'moi_nhat';
 
+// ĐÓN NHẬN TỪ KHÓA TÌM KIẾM TRỰC TIẾP TRONG TRANG
+$keyword          = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
+
 $allowedTypes     = ['Guitar', 'Organ', 'Trống', 'Ukulele', 'Violin', 'Piano', 'Phụ kiện'];
 $selectedTypes    = array_values(array_intersect($allowedTypes, $selectedTypes));
 
-// 2. TRUY VẤN DỮ LIỆU CẢ 2 BẢNG (NHẠC CỤ & PHỤ KIỆN)
+// Đón nhận từ khóa từ cả 2 dạng (?keyword=... hoặc ?q=...)
+$keyword = '';
+if (isset($_GET['keyword']) && trim($_GET['keyword']) !== '') {
+    $keyword = trim($_GET['keyword']);
+} elseif (isset($_GET['q']) && trim($_GET['q']) !== '') {
+    $keyword = trim($_GET['q']);
+}
+
+// Chuẩn bị điều kiện tìm kiếm
+$searchClauseNC = "";
+$searchClausePK = "";
+$params = [];
+
+if (!empty($keyword)) {
+    // Tìm theo tên nhạc cụ hoặc mô tả
+    $searchClauseNC = " AND (nc.NC_Ten LIKE :kw OR nc.NC_MoTa LIKE :kw)";
+    // Tìm theo tên phụ kiện hoặc mô tả
+    $searchClausePK = " AND (pk.PK_Ten LIKE :kw OR pk.PK_MoTa LIKE :kw)";
+    
+    // Gán giá trị vào mảng params
+    $params['kw'] = "%" . $keyword . "%";
+}
+
+// TRUY VẤN BẢNG NHẠC CỤ
 $sqlNhacCu = "
     SELECT nc.NC_Ma AS id, nc.NC_Ten AS name,
            nc.NC_GiaBan AS original_price, nc.NC_GiaKhuyenMai AS sale_price,
@@ -24,12 +55,14 @@ $sqlNhacCu = "
     FROM nhaccu nc
     INNER JOIN thuonghieu th ON nc.TH_Ma = th.TH_Ma
     INNER JOIN loainhaccu lnc ON nc.LNC_Ma = lnc.LNC_Ma
-    WHERE nc.NC_TrangThai = 1
+    WHERE nc.NC_TrangThai = 1 
+    " . $searchClauseNC . "
 ";
 $stmt = $conn->prepare($sqlNhacCu);
-$stmt->execute();
+$stmt->execute($params); // Truyền đúng mảng tham số vào đây
 $nhacCuRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// TRUY VẤN BẢNG PHỤ KIỆN
 $sqlPhuKien = "
     SELECT pk.PK_Ma AS id, pk.PK_Ten AS name,
            pk.PK_GiaBan AS original_price, pk.PK_GiaKhuyenMai AS sale_price,
@@ -38,13 +71,15 @@ $sqlPhuKien = "
            'Phụ kiện' AS category, 'phukien' AS product_type
     FROM phukien pk
     INNER JOIN thuonghieu th ON pk.TH_Ma = th.TH_Ma
-    WHERE pk.PK_TrangThai = 1
+    WHERE pk.PK_TrangThai = 1 
+    " . $searchClausePK . "
 ";
 $stmt = $conn->prepare($sqlPhuKien);
-$stmt->execute();
+$stmt->execute($params); // Truyền đúng mảng tham số vào đây
 $phuKienRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $allRows = array_merge($nhacCuRows, $phuKienRows);
+
 
 // Hàm chuẩn hóa loại sản phẩm
 function normalize_product_type($category) {
@@ -58,7 +93,7 @@ function normalize_product_type($category) {
     return trim((string)$category);
 }
 
-// 3. ĐẾM SỐ LƯỢNG SẢN PHẨM THEO THƯƠNG HIỆU & LOẠI
+// 5. ĐẾM SỐ LƯỢNG SẢN PHẨM THEO THƯƠNG HIỆU & LOẠI
 $brandCounts = [];
 $typeCounts  = [];
 
@@ -74,7 +109,7 @@ ksort($brandCounts);
 $availableBrands = array_keys($brandCounts);
 $selectedBrands  = array_values(array_intersect($availableBrands, $selectedBrands));
 
-// 4. LỌC DANH SÁCH SẢN PHẨM
+// 6. LỌC CHI TIẾT DANH SÁCH SẢN PHẨM
 $gallery_products = [];
 foreach ($allRows as $product) {
     $image = $product['image'] ?? '';
@@ -124,28 +159,24 @@ foreach ($allRows as $product) {
     ];
 }
 
-// 5. SẮP XẾP SẢN PHẨM THEO TIÊU CHÍ CHỌN
+// 7. SẮP XẾP SẢN PHẨM THEO TIÊU CHÍ CHỌN
 usort($gallery_products, function($a, $b) use ($sortBy) {
     switch ($sortBy) {
         case 'cung_loai':
-            // Gom các sản phẩm theo loại nhạc cụ
             return strcmp($a['category'], $b['category']);
         case 'gia_tang':
-            // Giá thấp nhất (giá từ thấp đến cao)
             if ($a['price'] == $b['price']) return 0;
             return ($a['price'] < $b['price']) ? -1 : 1;
         case 'gia_giam':
-            // Giá cao nhất (giá từ cao đến thấp)
             if ($a['price'] == $b['price']) return 0;
             return ($a['price'] > $b['price']) ? -1 : 1;
         case 'moi_nhat':
         default:
-            // Hàng mới: Ưu tiên sản phẩm có mã/ID lớn hơn
             return $b['id'] - $a['id'];
     }
 });
 
-// 6. XỬ LÝ PHÂN TRANG
+// 8. XỬ LÝ PHÂN TRANG
 $per_page         = 4;
 $total_products   = count($gallery_products);
 $total_pages      = max(1, (int)ceil($total_products / $per_page));
@@ -160,12 +191,12 @@ $filterBaseUrl    = '?' . http_build_query($queryWithoutPage);
 if ($filterBaseUrl === '?') $filterBaseUrl = '?';
 
 // Tổng số điều kiện đang lọc
-$activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice !== null || $maxPrice !== null ? 1 : 0) + ($hideOutOfStock ? 1 : 0);
+$activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice !== null || $maxPrice !== null ? 1 : 0) + ($hideOutOfStock ? 1 : 0) + (!empty($keyword) ? 1 : 0);
 ?>
 
 <main class="flex-1 bg-[#FBF8F5] text-[#2D2319] font-sans">
   
-  <!-- 1. HERO HEADER BANNER GALLERY -->
+  <!-- HERO HEADER BANNER GALLERY -->
   <section class="bg-gradient-to-r from-[#2D2319] via-[#4A382C] to-[#5F371D] text-white py-10 px-6 border-b border-[#754728]/30">
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
@@ -176,7 +207,7 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
           </div>
           <h1 class="text-3xl lg:text-4xl font-extrabold tracking-tight font-serif mb-3">GÓC NHẠC CỤ</h1>
           <p class="text-xs lg:text-sm text-[#D4C7BA] leading-relaxed mb-6">
-            Xem ảnh độ phân giải cao của chính <strong class="text-white underline">xác từng cây đàn</strong> trong kho, cân nặng thực tế và từng gram (lbs/kg); và xem trực tiếp biên bản kiểm tra kỹ thuật <strong class="text-white underline">55-Point Inspection</strong> trước khi bấm đặt hàng.
+            Xem ảnh độ phân giải cao của chính <strong class="text-white underline">xác từng cây đàn</strong> trong kho, cân nặng thực tế và từng gram; cùng biên bản kiểm tra kỹ thuật <strong class="text-white underline">55-Point Inspection</strong> trước khi đặt hàng.
           </p>
 
           <div class="flex flex-wrap items-center gap-6 text-xs border-t border-white/15 pt-4">
@@ -202,7 +233,7 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
           </div>
           <h3 class="font-bold text-sm mb-1">Không giao hàng "mù mờ"</h3>
           <p class="text-[11px] text-[#D4C7BA] leading-relaxed mb-4">
-            Mỗi cây Guitar có vân gỗ, số serial riêng biệt được cân đo chỉn chu trên website đều sẵn sàng trong kho để đóng gói gửi tới tay bạn. Nếu không đúng hình, hoàn tiền 100%.
+            Mỗi cây nhạc cụ có số serial riêng biệt sẵn sàng trong kho. Nếu không đúng hình, hoàn tiền 100%.
           </p>
           <div class="flex items-center justify-between text-xs font-bold pt-3 border-t border-white/15">
             <span class="text-emerald-400">✓ Đạt chuẩn Luthier A+</span>
@@ -213,7 +244,7 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
     </div>
   </section>
 
-  <!-- 2. MAIN CONTENT -->
+  <!-- MAIN CONTENT -->
   <section class="max-w-7xl mx-auto px-6 py-8">
     <div class="grid grid-cols-12 gap-8">
       
@@ -222,8 +253,9 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
         
         <form id="filterForm" method="GET" action="" onsubmit="event.preventDefault(); applyFilterAjax();" class="bg-white rounded-2xl border border-[#E7E0D8] p-5 shadow-sm">
           
-          <!-- INPUT ẨN ĐỂ GIỮ LẠI TIÊU CHÍ SẮP XẾP KHI SUBMIT BỘ LỌC -->
+          <!-- INPUT ẨN GIỮ LẠI TRẠNG THÁI SẮP XẾP VÀ TỪ KHÓA TÌM KIẾM -->
           <input type="hidden" name="sort" id="hiddenSortInput" value="<?= htmlspecialchars($sortBy) ?>">
+          <input type="hidden" name="keyword" id="hiddenKeywordInput" value="<?= htmlspecialchars($keyword) ?>">
 
           <!-- TIÊU ĐỀ LỌC & NÚT XÓA TOÀN BỘ -->
           <div class="flex items-center justify-between mb-3">
@@ -241,6 +273,16 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
             <?php if ($activeFilterCount > 0): ?>
               <div class="flex flex-wrap gap-2 mb-4 pb-3 border-b border-[#E7E0D8]">
                 
+                <!-- Tag Từ khóa tìm kiếm -->
+                <?php if (!empty($keyword)): 
+                  $q = $_GET; unset($q['keyword'], $q['page']);
+                ?>
+                  <span class="bg-[#F0F0F0] text-[#333] border border-gray-300 text-xs px-3 py-1 rounded-full inline-flex items-center gap-1.5 font-medium">
+                    Từ khóa: "<?= htmlspecialchars($keyword) ?>"
+                    <a href="?<?= htmlspecialchars(http_build_query($q)) ?>" class="ajax-filter-link w-4 h-4 rounded-full bg-gray-400 text-white flex items-center justify-center text-[10px] hover:bg-gray-600">✕</a>
+                  </span>
+                <?php endif; ?>
+
                 <!-- Tag Loại -->
                 <?php foreach ($selectedTypes as $type): 
                   $removeTypes = array_values(array_diff($selectedTypes, [$type])); 
@@ -345,7 +387,7 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
               </div>
             </div>
 
-            <!-- SECTION 3: LOẠI NHẠC CỤ & PHỤ KIỆN -->
+            <!-- SECTION 3: LOẠI SẢN PHẨM -->
             <div class="border border-gray-100 rounded-lg overflow-hidden">
               <div class="bg-[#F6F6F6] px-3.5 py-2.5 flex items-center justify-between cursor-pointer select-none" onclick="toggleSection('sec-type')">
                 <span class="font-bold text-xs text-[#222]">Loại sản phẩm <?= count($selectedTypes) > 0 ? '('.count($selectedTypes).')' : '' ?></span>
@@ -375,9 +417,9 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
               </div>
               <div id="sec-price" class="p-3.5 space-y-3">
                 <div class="flex items-center gap-2">
-                  <input type="number" min="0" name="gia_tu" value="<?= $minPrice !== null ? htmlspecialchars((string)$minPrice) : '' ?>" placeholder="130000" class="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-[#8C5835]">
+                  <input type="number" min="0" name="gia_tu" value="<?= $minPrice !== null ? htmlspecialchars((string)$minPrice) : '' ?>" placeholder="0" class="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-[#8C5835]">
                   <span class="text-gray-400 font-bold">-</span>
-                  <input type="number" min="0" name="gia_den" value="<?= $maxPrice !== null ? htmlspecialchars((string)$maxPrice) : '' ?>" placeholder="198000000" class="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-[#8C5835]">
+                  <input type="number" min="0" name="gia_den" value="<?= $maxPrice !== null ? htmlspecialchars((string)$maxPrice) : '' ?>" placeholder="50000000" class="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-[#8C5835]">
                 </div>
                 
                 <button type="submit" class="w-full bg-[#A48650] hover:bg-[#8C713A] text-white font-bold text-xs py-2.5 rounded-xl transition shadow-sm">
@@ -401,10 +443,10 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
             </div>
           </div>
           <p class="text-[11px] text-[#D4C7BA] leading-relaxed mb-4">
-            Bạn cần đo trọng lượng chính xác hay test âm trực tiếp? Tôi đang ở kho sẵn sàng hỗ trợ bạn!
+            Bạn cần đo trọng lượng chính xác hay test âm trực tiếp? Tôi sẵn sàng hỗ trợ!
           </p>
           <a href="tel:19008888" class="block text-center bg-[#8C5835] hover:bg-[#724324] text-white font-bold py-2.5 rounded-xl shadow transition">
-            Gọi Tư Vấn Riêng Cây Này
+            Gọi Tư Vấn Ngay
           </a>
         </div>
       </aside>
@@ -420,12 +462,13 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
           </div>
 
           <div class="flex items-center gap-3">
+            <!-- Ô TÌM KIẾM TRỰC TIẾP (LIVE SEARCH AJAX) -->
             <div class="relative">
-              <input type="text" placeholder="Tìm theo số Serial hoặc mã..." class="bg-[#FBF8F5] border border-[#E7E0D8] rounded-xl pl-3 pr-8 py-2 text-xs text-[#2D2319] focus:outline-none focus:border-[#8C5835]"/>
+              <input type="text" id="searchInput" name="keyword" value="<?= htmlspecialchars($keyword) ?>" onkeyup="searchProductsAjax()" placeholder="Tìm tên đàn, phụ kiện..." class="bg-[#FBF8F5] border border-[#E7E0D8] rounded-xl pl-3 pr-8 py-2 text-xs text-[#2D2319] focus:outline-none focus:border-[#8C5835]"/>
               <i data-lucide="search" class="w-3.5 h-3.5 text-[#9E948A] absolute right-3 top-1/2 -translate-y-1/2"></i>
             </div>
             
-            <!-- THẺ SELECT SẮP XẾP SẢN PHẨM TỰ ĐỘNG CẬP NHẬT AJAX -->
+            <!-- SELECT SẮP XẾP SẢN PHẨM -->
             <select id="sortSelect" onchange="changeSortOption(this.value)" class="bg-[#FBF8F5] border border-[#E7E0D8] rounded-xl px-3 py-2 text-xs font-semibold text-[#2D2319] focus:outline-none focus:border-[#8C5835]">
               <option value="cung_loai" <?= $sortBy === 'cung_loai' ? 'selected' : '' ?>>Sản phẩm cùng loại</option>
               <option value="gia_tang" <?= $sortBy === 'gia_tang' ? 'selected' : '' ?>>Giá thấp nhất</option>
@@ -435,12 +478,12 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
           </div>
         </div>
 
-        <!-- GRID 2 CỘT SẢN PHẨM -->
+        <!-- GRID SẢN PHẨM -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <?php if (empty($display_products)): ?>
             <div class="col-span-full bg-white rounded-2xl border border-[#E7E0D8] p-8 text-center text-[#7A6F64]">
               <p class="font-bold mb-1 text-sm">Không tìm thấy sản phẩm phù hợp</p>
-              <p class="text-xs">Vui lòng bỏ chọn bớt bộ lọc để hiển thị thêm sản phẩm.</p>
+              <p class="text-xs">Vui lòng thử lại với từ khóa khác hoặc điều chỉnh bộ lọc.</p>
             </div>
           <?php else: ?>
             <?php foreach ($display_products as $item): ?>
@@ -504,17 +547,16 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
                               Chi tiết
                           </a>
 
-                         <form action="gio-hang.php" method="POST" class="flex-1">
-    <input type="hidden" name="action" value="add">
-    <!-- Thêm dòng này để phân biệt nhạc cụ hay phụ kiện -->
-    <input type="hidden" name="product_type" value="<?= htmlspecialchars($item['product_type']) ?>">
-    <input type="hidden" name="product_id" value="<?= (int)$item['id'] ?>">
+                          <form action="gio-hang.php" method="POST" class="flex-1">
+                            <input type="hidden" name="action" value="add">
+                            <input type="hidden" name="product_type" value="<?= htmlspecialchars($item['product_type']) ?>">
+                            <input type="hidden" name="product_id" value="<?= (int)$item['id'] ?>">
 
-    <button type="submit" <?= $item['stock'] <= 0 ? 'disabled' : '' ?>
-            class="w-full bg-[#8C5835] hover:bg-[#724324] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-3 rounded-2xl transition shadow">
-        Đặt
-    </button>
-</form>
+                            <button type="submit" <?= $item['stock'] <= 0 ? 'disabled' : '' ?>
+                                    class="w-full bg-[#8C5835] hover:bg-[#724324] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-3 rounded-2xl transition shadow">
+                                Đặt
+                            </button>
+                        </form>
                       </div>
                   </div>
               </div>
@@ -522,14 +564,13 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
           <?php endif; ?>
         </div>
 
-        <!-- THANH PHÂN TRANG (CÓ CÁC LINK LỌC AJAX) -->
+        <!-- THANH PHÂN TRANG -->
         <?php if ($total_pages > 1): ?>
           <div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#7A6F64] bg-white p-4 rounded-2xl border border-[#E7E0D8] shadow-sm">
             <span>Hiển thị trang <strong><?= $current_page ?></strong> trong tổng số <strong><?= $total_pages ?></strong> trang</span>
 
             <div class="flex items-center gap-2 font-bold text-xs">
               
-              <!-- NÚT 'TRƯỚC' -->
               <?php if ($current_page > 1): ?>
                 <a href="<?= htmlspecialchars($filterBaseUrl . (strpos($filterBaseUrl, '?') !== false && $filterBaseUrl !== '?' ? '&' : '') . 'page=' . ($current_page - 1)) ?>" 
                    class="ajax-filter-link px-4 py-2 bg-white border border-[#E0D2C4] hover:border-[#8C5835] hover:text-[#8C5835] text-[#2D2319] rounded-2xl transition shadow-sm">
@@ -537,7 +578,6 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
                 </a>
               <?php endif; ?>
 
-              <!-- CÁC NÚT TRANG -->
               <?php
               $start = max(1, $current_page - 1);
               $end   = min($total_pages, $current_page + 1);
@@ -572,7 +612,6 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
                 </a>
               <?php endif; ?>
 
-              <!-- NÚT 'SAU' -->
               <?php if ($current_page < $total_pages): ?>
                 <a href="<?= htmlspecialchars($filterBaseUrl . (strpos($filterBaseUrl, '?') !== false && $filterBaseUrl !== '?' ? '&' : '') . 'page=' . ($current_page + 1)) ?>" 
                    class="ajax-filter-link px-4 py-2 bg-white border border-[#E0D2C4] hover:border-[#8C5835] hover:text-[#8C5835] text-[#2D2319] rounded-2xl transition shadow-sm font-bold">
@@ -591,9 +630,8 @@ $activeFilterCount = count($selectedTypes) + count($selectedBrands) + ($minPrice
 
 </main>
 
-<!-- JAVASCRIPT XỬ LÝ LỌC TỰ ĐỘNG KHÔNG REFRESH TRANG (AJAX) -->
+<!-- JAVASCRIPT XỬ LÝ LỌC & TÌM KIẾM AJAX KHÔNG REFRESH TRANG -->
 <script>
-// 1. Hàm chính lọc & sắp xếp AJAX không reload trang
 function applyFilterAjax(targetUrl = null) {
   const form = document.getElementById('filterForm');
   let url = targetUrl;
@@ -606,7 +644,6 @@ function applyFilterAjax(targetUrl = null) {
   const productContainer = document.getElementById('product-list-container');
   const tagsContainer = document.getElementById('active-tags-container');
 
-  // Làm mờ nhẹ danh sách sản phẩm để thông báo đang tải
   if (productContainer) productContainer.style.opacity = '0.4';
 
   fetch(url)
@@ -615,20 +652,17 @@ function applyFilterAjax(targetUrl = null) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
 
-      // Cập nhật lại khung danh sách sản phẩm & phân trang
       const newProductContent = doc.getElementById('product-list-container');
       if (productContainer && newProductContent) {
         productContainer.innerHTML = newProductContent.innerHTML;
         productContainer.style.opacity = '1';
       }
 
-      // Cập nhật các Chip/Tag đang lọc
       const newTagsContent = doc.getElementById('active-tags-container');
       if (tagsContainer && newTagsContent) {
         tagsContainer.innerHTML = newTagsContent.innerHTML;
       }
 
-      // Đẩy URL mới lên thanh địa chỉ mà KHÔNG làm tải lại hay nhảy trang
       history.pushState(null, '', url);
     })
     .catch(err => {
@@ -637,18 +671,45 @@ function applyFilterAjax(targetUrl = null) {
     });
 }
 
-// 2. Hàm khi thay đổi tiêu chí sắp xếp
 function changeSortOption(sortVal) {
   document.getElementById('hiddenSortInput').value = sortVal;
   
   const currentUrl = new URL(window.location.href);
   currentUrl.searchParams.set('sort', sortVal);
-  currentUrl.searchParams.delete('page'); // Reset về trang 1 khi đổi tiêu chí sắp xếp
+  currentUrl.searchParams.delete('page');
 
   applyFilterAjax(currentUrl.pathname + currentUrl.search);
 }
 
-// 3. Bắt sự kiện click vào các liên kết tag hoặc phân trang
+// Live search tự động tìm kiếm không reload trang
+let searchTimeout;
+function searchProductsAjax() {
+  clearTimeout(searchTimeout);
+  
+  searchTimeout = setTimeout(() => {
+    const keywordVal = document.getElementById('searchInput').value.trim();
+    
+    const hiddenKeyword = document.getElementById('hiddenKeywordInput');
+    if (hiddenKeyword) {
+      hiddenKeyword.value = keywordVal;
+    }
+
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    
+    if (keywordVal) {
+      formData.set('keyword', keywordVal);
+    } else {
+      formData.delete('keyword');
+    }
+    
+    formData.delete('page'); // Reset về trang 1
+
+    const url = '?' + new URLSearchParams(formData).toString();
+    applyFilterAjax(url);
+  }, 300);
+}
+
 document.addEventListener('click', function(e) {
   const link = e.target.closest('.ajax-filter-link');
   if (link) {
@@ -658,12 +719,10 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// 4. Xử lý khi người dùng bấm nút Back / Forward trên trình duyệt
 window.addEventListener('popstate', function() {
   applyFilterAjax(location.href);
 });
 
-// 5. Live search danh sách thương hiệu trong sidebar
 function filterBrandList() {
   const query = document.getElementById('searchBrandInput').value.toLowerCase().trim();
   const items = document.querySelectorAll('.brand-item');
@@ -678,7 +737,6 @@ function filterBrandList() {
   });
 }
 
-// 6. Mở rộng / thu gọn danh sách thương hiệu
 let isBrandExpanded = false;
 function toggleMoreBrands() {
   const hiddenItems = document.querySelectorAll('.hidden-brand');
@@ -696,7 +754,6 @@ function toggleMoreBrands() {
   btn.innerHTML = isBrandExpanded ? '- Thu gọn' : '+ Xem Thêm ' + hiddenItems.length;
 }
 
-// 7. Ẩn / hiện các Accordion trong Sidebar
 function toggleSection(id) {
   const sec = document.getElementById(id);
   const icon = document.getElementById('icon-' + id);
